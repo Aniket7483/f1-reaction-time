@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F1 REACTION LIGHTS</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Roboto+Mono:wght@400;700&display=swap');
+
+:root { --f1-red: #e10600; }
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+background:linear-gradient(180deg,#0a0a0a,#1a0000);
+color:#fff;
+font-family:'Roboto Mono',monospace;
+min-height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+.container{max-width:820px;width:100%;padding:20px;text-align:center;}
+
+.title{
+font-family:'Orbitron',sans-serif;
+font-size:clamp(2.2rem,8vw,3.8rem);
+letter-spacing:8px;
+color:var(--f1-red);
+text-shadow:0 0 25px rgba(225,6,0,0.7);
+margin-bottom:8px;
+}
+
+.subtitle{color:#aaa;letter-spacing:4px;margin-bottom:15px;}
+
+.lights-container{
+display:flex;
+justify-content:center;
+gap:28px;
+margin:40px 0;
+padding:30px;
+background:#000;
+border-radius:20px;
+border:6px solid #222;
+}
+
+.light{
+width:82px;height:82px;border-radius:50%;
+background:#1a1a1a;
+border:10px solid #333;
+transition:0.25s;
+}
+
+.light.red{
+background:#e10600;
+box-shadow:0 0 35px #e10600;
+}
+
+.light.green{
+background:#00ff41;
+box-shadow:0 0 45px #00ff41;
+}
+
+.status{
+font-size:1.5rem;
+margin:20px 0;
+min-height:60px;
+}
+
+.info-panel{
+display:flex;
+justify-content:space-between;
+background:#111;
+padding:18px;
+border-radius:12px;
+margin-bottom:25px;
+}
+
+.info-value{
+font-family:'Orbitron';
+font-size:2rem;
+}
+
+.reaction-time{color:#00ff41;}
+.best-time{color:#ffdd00;}
+
+button{
+font-family:'Orbitron';
+padding:14px 36px;
+border:none;
+border-radius:50px;
+cursor:pointer;
+font-size:1.2rem;
+margin:10px;
+}
+
+#start-btn{background:var(--f1-red);color:white;}
+#reset-btn{background:#333;color:white;display:none;}
+
+/* ===== FIXED PERSONALITY SECTION ===== */
+
+.personality{
+margin-top:25px;
+padding:22px 30px;
+border-radius:14px;
+border-left:6px solid var(--f1-red);
+background:rgba(225,6,0,0.15);
+box-shadow:0 0 20px rgba(225,6,0,0.5);
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+text-align:center;
+opacity:0;
+visibility:hidden;
+transition:opacity .3s ease;
+min-height:80px;
+}
+
+.personality.show{
+opacity:1;
+visibility:visible;
+}
+
+.personality .driver{
+font-size:1.4rem;
+font-weight:bold;
+margin-bottom:6px;
+color:#00ff41;
+text-shadow:0 0 10px rgba(0,255,65,0.8);
+}
+
+.personality .f1-line{
+font-size:1.1rem;
+color:#ffdd00;
+}
+
+footer{margin-top:25px;color:#777;}
+
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<div class="title">F1 REACTION</div>
+<div class="subtitle">START LIGHTS CHALLENGE</div>
+
+<div class="lights-container">
+<div class="light" id="light-1"></div>
+<div class="light" id="light-2"></div>
+<div class="light" id="light-3"></div>
+<div class="light" id="light-4"></div>
+<div class="light" id="light-5"></div>
+</div>
+
+<div class="status" id="status">PRESS START TO RACE</div>
+
+<div class="info-panel">
+<div>
+<div>REACTION TIME</div>
+<div class="info-value reaction-time" id="reaction-time">000</div>
+</div>
+<div>
+<div>BEST TIME</div>
+<div class="info-value best-time" id="best-time">N/A</div>
+</div>
+</div>
+
+<button id="start-btn">START RACE</button>
+<button id="reset-btn">RESET</button>
+
+<div class="personality" id="personality"></div>
+
+<footer>Click anywhere when lights go GREEN</footer>
+
+</div>
+
+<script>
+
+const lights=[
+document.getElementById('light-1'),
+document.getElementById('light-2'),
+document.getElementById('light-3'),
+document.getElementById('light-4'),
+document.getElementById('light-5')
+];
+
+let gameState='idle';
+let greenTimestamp=0;
+let timeouts=[];
+let bestTime=localStorage.getItem('f1BestReaction')?
+parseInt(localStorage.getItem('f1BestReaction')):Infinity;
+
+const statusEl=document.getElementById('status');
+const reactionEl=document.getElementById('reaction-time');
+const bestEl=document.getElementById('best-time');
+const personalityEl=document.getElementById('personality');
+const startBtn=document.getElementById('start-btn');
+const resetBtn=document.getElementById('reset-btn');
+
+function updateBestDisplay(){
+bestEl.textContent=(bestTime===Infinity)?'N/A':bestTime;
+}
+updateBestDisplay();
+
+function getPersonality(ms){
+if(ms<200){
+return `<span class="driver">MAX VERSTAPPEN</span>
+<span class="f1-line">DU DU DU DU… MAX VERSTAPPEN!</span>`;
+}
+if(ms<300){
+return `<span class="driver">CARLOS SAINZ</span>
+<span class="f1-line">Smooth Operatoooor 🎵</span>`;
+}
+if(ms<400){
+return `<span class="driver">CHARLES LECLERC</span>
+<span class="f1-line">Chicken! 🐔</span>`;
+}
+return `<span class="driver">ROOKIE DRIVER</span>
+<span class="f1-line">Go gokarting first 😭</span>`;
+}
+
+function resetGame(){
+timeouts.forEach(t=>clearTimeout(t));
+timeouts=[];
+lights.forEach(l=>l.classList.remove('red','green'));
+gameState='idle';
+statusEl.textContent='PRESS START TO RACE';
+reactionEl.textContent='000';
+personalityEl.classList.remove('show');
+personalityEl.innerHTML='';
+startBtn.style.display='inline-block';
+resetBtn.style.display='none';
+}
+
+function startSequence(){
+resetGame();
+gameState='sequence';
+startBtn.style.display='none';
+resetBtn.style.display='inline-block';
+
+let delay = 0;
+
+for (let i = 0; i < 5; i++) {
+    timeouts.push(setTimeout(() => {
+        lights[i].classList.add('red');
+    }, delay));
+
+    delay += 700 + Math.random() * 200; // slight natural variation
+}
+
+const randomDelay=Math.random()*2000+800;
+
+timeouts.push(setTimeout(()=>{
+lights.forEach(l => {
+    l.classList.remove('red');
+});
+greenTimestamp=Date.now();
+gameState='ready';
+statusEl.textContent='GO!!! CLICK NOW!';
+statusEl.textContent = 'LIGHTS OUT!!!';
+},delay+randomDelay));
+}
+
+function handleClick(e){
+if(e.target.tagName==='BUTTON')return;
+
+if(gameState==='sequence'){
+timeouts.forEach(t=>clearTimeout(t));
+gameState='finished';
+statusEl.textContent='FALSE START!';
+personalityEl.innerHTML=`<span class="driver">DISQUALIFIED</span>
+<span class="f1-line">Too early, driver!</span>`;
+personalityEl.classList.add('show');
+}
+else if(gameState==='ready'){
+const reactionTime=Date.now()-greenTimestamp;
+gameState='finished';
+reactionEl.textContent=reactionTime;
+
+if(reactionTime<bestTime){
+bestTime=reactionTime;
+localStorage.setItem('f1BestReaction',bestTime);
+updateBestDisplay();
+}
+
+personalityEl.innerHTML=getPersonality(reactionTime);
+personalityEl.classList.add('show');
+
+statusEl.innerHTML=`REACTION TIME: ${reactionTime} ms`;
+}
+}
+
+startBtn.addEventListener('click',startSequence);
+resetBtn.addEventListener('click',resetGame);
+document.addEventListener('click',handleClick);
+
+</script>
+
+</body>
+</html>
